@@ -1,6 +1,7 @@
 package frc283.lib.auto;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Timer;
@@ -18,6 +19,14 @@ import edu.wpi.first.wpilibj.Timer;
  *     Stored Route: All PhantomRoutes that were found on the file system or just created this session. Includes the active route. "Routes" (plural) usually refers to these
  *     Playback: The process of playing back all the joystick data
  *     Recording: The process of actually recording the joystick data
+ *     
+ * TODO; prevent duplicate routes
+ * TODO: save function
+ * TODO: enable/disable printsouts
+ * TODO: change everything to javadoc comments
+ * TODO: maybe have the constructor not have everry parameter in it, i.e optional apramers
+ * TODO: have a version number system in the constructor
+ * TODO: every data point must have an ms thing - if you do this, consider making the timespacing infinity i.e. saves data on every loop possible
  */
 public class PhantomJoystick
 {
@@ -143,7 +152,7 @@ public class PhantomJoystick
 	/**
 	 * Save each PhantomRoute
 	 */
-	private void saveRoutes()
+	public void saveRoutes()
 	{
 		print("Saving routes.");
 		//Iterates through each PhantomRoute and saves it
@@ -153,6 +162,14 @@ public class PhantomJoystick
 		}
 	}
 	
+	/**
+	 * 
+	 * @param title
+	 * @param robot
+	 * @param desc
+	 * @param role
+	 * @param timeSpacing - Must be at least 30ms
+	 */
 	public void createRoute(String title, String robot, String desc, String role, int timeSpacing)
 	{
 		//Ensures that the route folder exists
@@ -170,7 +187,7 @@ public class PhantomJoystick
 	public void setActiveRoute(String routeName)
 	{
 		activeRoute = routeName;
-		print("Active route is now " + routeName + ".");
+		//print("Active route is now " + routeName + ".");
 	}
 	
 	/**
@@ -189,11 +206,22 @@ public class PhantomJoystick
 	{
 		if (playback == true)
 		{
-			return storedRoutes.get(activeRoute).getAnalog(number).get(getTimeIndex(timer.get()));
+			int timeIndex = getTimeIndex(timer.get());
+			System.out.println("Accessing analog timeline " + number + " at timeIndex " + timeIndex + " at time " + timer.get());
+			ArrayList<Double> timeline = storedRoutes.get(activeRoute).getAnalog(number);
+			if (timeIndex < timeline.size())
+			{
+				return timeline.get(timeIndex);
+			}
+			else
+			{
+				playbackStop();
+				return 0;
+			}
 		}
 		else
 		{
-			System.err.print("PhantomJoystick.getRawAxis: You must call playbackInit to initiate playback");
+			//System.err.println("PhantomJoystick.getRawAxis: Playback has ended. You must call playbackInit to initiate playback");
 			return 0;
 		}
 	}
@@ -206,11 +234,21 @@ public class PhantomJoystick
 	{
 		if (playback == true)
 		{
-			return storedRoutes.get(activeRoute).getDigital(number).get(getTimeIndex(timer.get()));
+			int timeIndex = getTimeIndex(timer.get());
+			ArrayList<Boolean> timeline = storedRoutes.get(activeRoute).getDigital(number);
+			if (timeIndex < timeline.size())
+			{
+				return timeline.get(timeIndex);
+			}
+			else
+			{
+				playbackStop();
+				return false;
+			}
 		}
 		else
 		{
-			System.err.print("PhantomJoystick.getRawAxis: You must call playbackInit to initiate playback");
+			//System.err.println("PhantomJoystick.getRawAxis: Playback has ended. You must call playbackInit to initiate playback");
 			return false;
 		}
 	}
@@ -226,6 +264,7 @@ public class PhantomJoystick
 			if (override)
 			{
 				this.clearRoute();
+				System.out.println("Inside recordInit: boolean arraylist 0 -> " + storedRoutes.get(activeRoute).getDigital(0));
 			}
 			print("Recording started.");
 			timer.reset();
@@ -258,8 +297,10 @@ public class PhantomJoystick
 			//The typecast to int acts as truncation e.g. 127 milliseconds would become 1.27 which is cast to 1.00
 			int timeIndex = getTimeIndex(timer.get());
 			
-			if (timeIndex > 1) //If at least one time-step has passed since last recording
+			if (timeIndex >= 1) //If at least one time-step has passed since last recording
 			{
+				System.out.println((int)(timer.get() * 1000) + "ms since last record.");
+			
 				//For each possible analog input
 				for (int a = 0; a < 6; a++)
 				{
@@ -295,13 +336,19 @@ public class PhantomJoystick
 			print("Recording stopped.");
 			System.out.println("active: " + activeRoute);
 			System.out.println("stored: " + storedRoutes.toString());
-			System.out.println("Analog Array: ");
+			System.out.println("Analog Arrays: ");
 			for (int a = 0; a < 6; a++)
 			{
 				PhantomRoute pr = storedRoutes.get(activeRoute);
-				System.out.println("pr: " + pr);
 				System.out.println("index: " + a);
-				System.out.println(pr.getAnalog(a));
+				System.out.println("	>" + pr.getAnalog(a));
+			}
+			System.out.println("Digital Arrays: ");
+			for (int d = 0; d < 10; d++)
+			{
+				PhantomRoute pr = storedRoutes.get(activeRoute);
+				System.out.println("index: " + d);
+				System.out.println("	>" + pr.getDigital(d));
 			}
 			recording = false;
 			timer.stop();
@@ -332,6 +379,8 @@ public class PhantomJoystick
 		if (playback == true)
 		{
 			print("Playback stopped.");
+			int est = storedRoutes.get(activeRoute).getTimeSpacing() * storedRoutes.get(activeRoute).getAnalog(0).size();
+			System.out.println("Total time it took: " + timer.get() + " theoretical value: " + est);
 			playback = false;
 			timer.stop();
 			timer.reset();
@@ -367,6 +416,8 @@ public class PhantomJoystick
 	public void clearRoute()
 	{
 		storedRoutes.get(activeRoute).clear();
+		storedRoutes.get(activeRoute).save();
+		System.out.println("Inside clearRoute: boolean arraylist 0 -> " + storedRoutes.get(activeRoute).getDigital(0));
 	}
 	
 	/**

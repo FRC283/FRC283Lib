@@ -54,6 +54,9 @@ public class PhantomRoute
 	//All newly created route files end with this file type/extension
 	public final static String EXTENSION = "route";
 	
+	/** The minimum ms needed for proper measurement */
+	public final static int MIN_TIME_SPACING = 30;
+	
 	//Object that contains all actual data describing route of robot
 	public RouteData routeData;
 	
@@ -93,7 +96,8 @@ public class PhantomRoute
 		//Last modified initially starts as the time of creation 
 		this.routeData.lastModified = new Date().getTime();
 		
-		this.routeData.timeSpacing = timeSpacing;
+		//Time spacing must be a certain minimum
+		this.routeData.timeSpacing = (timeSpacing < MIN_TIME_SPACING) ? MIN_TIME_SPACING : timeSpacing;
 		
 		this.routeData.title = title.toLowerCase().replace(" ", "_");
 		
@@ -129,7 +133,7 @@ public class PhantomRoute
 		}
 		
 		//E.g. root\routes\2018_napalm_left_side.route
-		String fullPath = folder.toLowerCase() + File.pathSeparator + this.getName() + "." + PhantomRoute.EXTENSION;
+		String fullPath = folder.toLowerCase() + File.separator + this.getName() + "." + PhantomRoute.EXTENSION;
 
 		//Access the file or the location where the file will be
 		this.file = new File(fullPath);
@@ -311,15 +315,17 @@ public class PhantomRoute
 	public void clear()
 	{
 		//Clear out each analog array
-		for (ArrayList<Double> a : routeData.analog)     
+		for (int a = 0; a < routeData.analog.length; a++)
 		{
-			a = new ArrayList<Double>(0);
+			routeData.analog[a].clear();
+			System.out.println("Analog array a: " + routeData.analog[a]);
 		}
 		
 		//Clear out each digital array
-		for (ArrayList<Boolean> b : routeData.digital)     
+		for (int b = 0; b < routeData.digital.length; b++)
 		{
-			b = new ArrayList<Boolean>(0);
+			routeData.digital[b].clear();
+			System.out.println("Digital array b: " + routeData.digital[b]);
 		}
 		
 		//Counts as a modification
@@ -371,7 +377,7 @@ public class PhantomRoute
 		String versionStr = (this.getVersion() == 1) ? " (v" + this.getVersion() + ")" : "";
 		
 		String tableStr = "";
-		tableStr += "| " + this.getName() + versionStr + "\n";
+		tableStr += "| \"" + this.getName() + "\"" + versionStr + "\n";
 		tableStr += "|    Description: \"" + this.getDescription() + "\"\n";
 		tableStr += "|    Saved at " + this.getPath() + "\n";
 		tableStr += "|    Last Modified " + this.getLastModified() + " (24-h Clock) \n";
@@ -443,7 +449,8 @@ public class PhantomRoute
 	{
 		//If the version is greater than 1, will add _v2, _v3 onto the end. If it's v1, nothing is added
 		String versionAddendum = (routeData.version > 1 ? ("_v" + routeData.version) : "");
-		return routeData.robot + "_" + routeData.role + "_" + routeData.title + versionAddendum;
+		String roleString = (routeData.role.equals("") ? "" : "_" + routeData.role);
+		return routeData.robot + roleString + "_" + routeData.title + versionAddendum;
 	}
 	
 	/**
