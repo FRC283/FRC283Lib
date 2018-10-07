@@ -23,9 +23,6 @@ import edu.wpi.first.wpilibj.Timer;
  *     
  * TODO; prevent duplicate routes
  * TODO: enable/disable printsouts
- * TODO: change everything to javadoc comments
- * TODO: maybe have the constructor not have everry parameter in it, i.e optional apramers
- * TODO: have a version number system in the constructor
  */
 public class PhantomJoystick
 {
@@ -47,9 +44,8 @@ public class PhantomJoystick
 	/** Used to mete out recording and playback */
 	private Timer timer;
 	
-	/** The string name of the route currently being written/read to/from
-	Why is this a string and not a PhantomRoute? Because java passes objects strangely, so we dont want to make a bunch of dupes */
-	private String activeRoute;
+	/** The route currently being written/read to/from] */
+	private PhantomRoute activeRoute;
 	
 	/** Used to control indexing during playback */
 	private int playbackIndex = 0;
@@ -134,23 +130,6 @@ public class PhantomJoystick
 	}
 	
 	/**
-	 * Whenever the timer is rolling for playback or recording, this function helps translate that
-	 * time value into a useful integer for accessing the arrays that describe the routes
-	 * 
-	 * First, converts the timer value into milliseconds
-	 * Then divides that 1000 milliseconds into a number of steps based on the time spacing
-	 * E.g. if the time spacing is 100, then 1 second will be divided into 10 saved values
-	 * The typecast to int acts as truncation e.g. 127 milliseconds would become 1.27 which is cast to 1.00
-	 *		
-	 * @param timeValue - the number of seconds on the timer.
-	 * @return - the time index for the current timer value
-	 */
-	private int getTimeIndex(double timeValue)
-	{
-		return (int)(timeValue * 1000 / storedRoutes.get(activeRoute).getTimeSpacing());
-	}
-	
-	/**
 	 * Save each PhantomRoute
 	 */
 	public void saveRoutes()
@@ -171,12 +150,12 @@ public class PhantomJoystick
 	 * @param role
 	 * @param timeSpacing - Must be at least 30ms
 	 */
-	public void createRoute(String title, String robot, String desc, String role, int timeSpacing)
+	public void createRoute(String title, String robot, String desc, String role)
 	{
 		//Ensures that the route folder exists
 		File folder = new File(routeFolder);
 		//Create a new PhantomRoute file
-		PhantomRoute newPhantomRoute = new PhantomRoute(title, robot, desc, role, timeSpacing, routeFolder);
+		PhantomRoute newPhantomRoute = new PhantomRoute(title, robot, desc, role, routeFolder);
 		//Add this new route to the index
 		storedRoutes.put(newPhantomRoute.getName(), newPhantomRoute);
 	}
@@ -187,7 +166,7 @@ public class PhantomJoystick
 	 */
 	public void setActiveRoute(String routeName)
 	{
-		activeRoute = routeName;
+		activeRoute = storedRoutes.get(routeName);
 		//print("Active route is now " + routeName + ".");
 	}
 	
@@ -196,18 +175,22 @@ public class PhantomJoystick
 	 */
 	public String getActiveRouteName()
 	{
-		return storedRoutes.get(activeRoute).getName();
+		return activeRoute.getName();
 	}
 	
 	/**
-	 * @param number - the axis number to get the value for
+	 * @param channel - the axis number to get the value for
 	 * @return - the most appropriate value for the current time since playback started
 	 */
-	public double getRawAxis(int number)
+	public double getRawAxis(int channel)
 	{
 		if (playback == true)
 		{
+			//Convert the playbackTime to an index value for that time
+			int playbackIndex = activeRoute.indexFromTime((int)(timer.get() * 1000));
 			
+			//Return the data at that index
+			return activeRoute.getAnalog(channel, playbackIndex);
 		}
 		else
 		{
@@ -217,24 +200,18 @@ public class PhantomJoystick
 	}
 	
 	/**
-	 * @param number - the button number to get the value for
+	 * @param channel - the button number to get the value for
 	 * @return - the most appropriate value for the current time since playback started
 	 */
-	public boolean getRawButton(int number)
+	public boolean getRawButton(int channel)
 	{
 		if (playback == true)
 		{
-			int timeIndex = getTimeIndex(timer.get());
-			ArrayList<Boolean> timeline = storedRoutes.get(activeRoute).getDigital(number);
-			if (timeIndex < timeline.size())
-			{
-				return timeline.get(timeIndex);
-			}
-			else
-			{
-				playbackStop();
-				return false;
-			}
+			//Convert the playbackTime to an index value for that time
+			int playbackIndex = activeRoute.indexFromTime((int)(timer.get() * 1000));
+			
+			//Return the data at that index
+			return activeRoute.getDigital(channel, playbackIndex);
 		}
 		else
 		{
@@ -254,7 +231,6 @@ public class PhantomJoystick
 			if (override)
 			{
 				this.clearRoute();
-				System.out.println("Inside recordInit: boolean arraylist 0 -> " + storedRoutes.get(activeRoute).getDigital(0));
 			}
 			print("Recording started.");
 			timer.reset();
@@ -281,41 +257,34 @@ public class PhantomJoystick
 	{
 		if (recording == true)
 		{
-			//First, converts the timer value into milliseconds
-			//Then divides that 1000 milliseconds into a number of steps based on the time spacing
-			//E.g. if the time spacing is 100, then 1 second will be divided into 10 saved values
-			//The typecast to int acts as truncation e.g. 127 milliseconds would become 1.27 which is cast to 1.00
-			int timeIndex = getTimeIndex(timer.get());
+			//Contains all the analog values from this measurement cycle
+			Double[] analogValues = new Double[RouteData.analogChannelCount];
 			
-			if (timeIndex >= 1) //If at least one time-step has passed since last recording
+			//For each possible analog input
+			for (int a = 0; a < analogValues.length; a++)
 			{
-				System.out.println((int)(timer.get() * 1000) + "ms since last record.");
+				//Populate the array with axis values
+				analogValues[a] = recordingJoystick.getRawAxis(a);
+			}
 			
-				//For each possible analog input
-				for (int a = 0; a < 6; a++)
-				{
-					//Get analog input #a, set its value at the timeIndex to be the current joystick axis value for axis #a
-					storedRoutes.get(activeRoute).getAnalog(a).add(recordingJoystick.getRawAxis(a));
-					//Push time since last recording
-					storedRoutes.get(activeRoute).getAnalogSpacing(a).add((int)(timer.get() * 1000));
-				}
-				
-				//For each possible digital input
-				for (int d = 0; d < 10; d++)
-				{
-					//Get digital input #d, set its value at the timeIndex to be the current joystick button value for digital #d
-					storedRoutes.get(activeRoute).getDigital(d).add(recordingJoystick.getRawButton(d));
-					//Push the time since last recording
-					storedRoutes.get(activeRoute).getDigitalSpacing(d).add((int)(timer.get() * 1000));
-				}
-				
-				//IMPORTANT: reset the timer.
-				timer.reset();
-			}
-			else //If one time-step hasn't passed
+			//Contains all the digital values from this measurement cycle
+			Boolean[] digitalValues = new Boolean[RouteData.digitalChannelCount];
+			
+			//For each possible digital input
+			for (int d = 0; d < digitalValues.length; d++)
 			{
-				//Do nothing
+				//Populate the array with button values
+				digitalValues[d] = recordingJoystick.getRawButton(d);
 			}
+			
+			//The milliseconds that have passed since last measurement
+			int msSinceLastMeasurement = (int)(timer.get() * 1000);
+			
+			//Add the newly recorded values
+			activeRoute.add(analogValues, digitalValues, msSinceLastMeasurement);
+			
+			//IMPORTANT: reset the timer.
+			timer.reset();
 		}
 	}
 	
@@ -327,23 +296,6 @@ public class PhantomJoystick
 	{
 		if (recording == true)
 		{
-			print("Recording stopped.");
-			System.out.println("active: " + activeRoute);
-			System.out.println("stored: " + storedRoutes.toString());
-			System.out.println("Analog Arrays: ");
-			for (int a = 0; a < 6; a++)
-			{
-				PhantomRoute pr = storedRoutes.get(activeRoute);
-				System.out.println("index: " + a);
-				System.out.println("	>" + pr.getAnalog(a));
-			}
-			System.out.println("Digital Arrays: ");
-			for (int d = 0; d < 10; d++)
-			{
-				PhantomRoute pr = storedRoutes.get(activeRoute);
-				System.out.println("index: " + d);
-				System.out.println("	>" + pr.getDigital(d));
-			}
 			recording = false;
 			timer.stop();
 			timer.reset();
@@ -374,8 +326,6 @@ public class PhantomJoystick
 		if (playback == true)
 		{
 			print("Playback stopped.");
-			int est = storedRoutes.get(activeRoute).getTimeSpacing() * storedRoutes.get(activeRoute).getAnalog(0).size();
-			System.out.println("Total time it took: " + timer.get() + " theoretical value: " + est);
 			playback = false;
 			timer.stop();
 			timer.reset();
@@ -395,14 +345,14 @@ public class PhantomJoystick
 	}
 	
 	/**
-	 * Deletes the route from the system
-	 * @param routeName - name of route to be deleted
+	 * Deletes the active route from the system
+	 * You must set the active route to something else before you do pretty much anything else after this
 	 */
-	public void deleteRoute(String routeName)
+	public void deleteRoute()
 	{
-		storedRoutes.get(routeName).delete();
-		storedRoutes.remove(routeName);
-		print("Removed route " + routeName + ".");
+		activeRoute.delete();
+		storedRoutes.remove(activeRoute.getName());
+		print("Removed route " + activeRoute + ".");
 	}
 	
 	/**
@@ -410,27 +360,26 @@ public class PhantomJoystick
 	 */
 	public void clearRoute()
 	{
-		storedRoutes.get(activeRoute).clear();
-		storedRoutes.get(activeRoute).save();
-		System.out.println("Inside clearRoute: boolean arraylist 0 -> " + storedRoutes.get(activeRoute).getDigital(0));
+		activeRoute.clear();
+		activeRoute.save();
 	}
 	
 	/**
-	 * @param routeName - name of route who's data will be printed
+	 * Get the nicely-formatted overview of the active phantomRoute
 	 * @return - nicely formatted table string
 	 */
-	public String getRouteOverview(String routeName)
+	public String getRouteOverview()
 	{
-		return storedRoutes.get(routeName).getOverview();
+		return activeRoute.getOverview();
 	}
 	
 	/**
-	 * @param routeName - name of route to print data of
+	 * Print an overview of the active route
 	 */
-	public void printRouteOverview(String routeName)
+	public void printRouteOverview()
 	{
 		//No print() function used because it has enough preface already, and also doesnt need to be enabled/disabled
-		System.out.println(getRouteOverview(routeName));
+		System.out.println(getRouteOverview());
 	}
 	
 	/**

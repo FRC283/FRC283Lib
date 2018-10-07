@@ -47,35 +47,35 @@ import com.google.gson.GsonBuilder;
  *  
  *  
  *  TODO: auto-save after operations?
- *  TODO: function to cut-out starting and ending blank values (to cut delays from the start of the autonomous)
+ *  TODO: function to cut-out starting and ending blank values (to cut delays from the start of the autonomous) - hey thats pretty cool
  */
 public class PhantomRoute 
 {	
-	//All newly created route files end with this file type/extension
+	/** All newly created route files end with this file type/extension */
 	public final static String EXTENSION = "route";
 	
 	/** The minimum ms needed for proper measurement */
 	public final static int MIN_TIME_SPACING = 30;
 	
-	//Object that contains all actual data describing route of robot
+	/** Object that contains all actual data describing route of robot */
 	public RouteData routeData;
 	
-	//The file on the RoboRIO that contains this route's data
+	/** The file on the RoboRIO that contains this route's data */
 	protected File file;
 	
-	//
+	/**  */
 	protected FileReader fileReader;
 	
-	//
+	/**  */
 	protected BufferedReader bufferedReader;
 	
-	//
+	/**  */
 	protected FileWriter fileWriter;
 	
-	//
+	/**  */
 	protected BufferedWriter bufferedWriter;
 	
-	//Google-developed library for turning java objects into json and back
+	/** Google-developed library for turning java objects into json and back */
 	protected Gson gson;
 	
 	/**
@@ -89,15 +89,12 @@ public class PhantomRoute
 	 * @param robot - name of the robot to use with route with
 	 * @param role - e.g. "Operator" or "Driver"
 	 */
-	public PhantomRoute(String title, String robot, String desc, String role, int timeSpacing, String folder)
+	public PhantomRoute(String title, String robot, String desc, String role, String folder)
 	{
 		this.routeData = new RouteData();
 		
 		//Last modified initially starts as the time of creation 
 		this.routeData.lastModified = new Date().getTime();
-		
-		//Time spacing must be a certain minimum
-		this.routeData.timeSpacing = (timeSpacing < MIN_TIME_SPACING) ? MIN_TIME_SPACING : timeSpacing;
 		
 		this.routeData.title = title.toLowerCase().replace(" ", "_");
 		
@@ -113,28 +110,13 @@ public class PhantomRoute
 		this.gson = new GsonBuilder().create();
 		
 		//There are 6 analog inputs on the robot
-		this.routeData.analog = (new ArrayList[6]);
-		this.routeData.analogSpacing = new ArrayList[6];
-		
-		//Initialize analog array
-		for (int j = 0; j < this.routeData.analog.length; j++)
-		{
-			//Each array value is a boolean ArrayList
-			this.routeData.analog[j] = new ArrayList<Double>(0);
-			this.routeData.analogSpacing[j] = new ArrayList<Integer>(0);
-		}
+		this.routeData.analog = new ArrayList<Double[]>(0);
 		
 		//There are 10 digital inputs on the robot
-		this.routeData.digital = new ArrayList[10];
-		this.routeData.digitalSpacing = new ArrayList[10];
+		this.routeData.digital = new ArrayList<Boolean[]>(0);
 		
-		//Initialize analog array
-		for (int h = 0; h < this.routeData.digital.length; h++)    
-		{
-			//Each array value is a boolean ArrayList
-			this.routeData.digital[h] = new ArrayList<Boolean>(0);
-			this.routeData.digitalSpacing[h] = new ArrayList<Integer>(0);
-		}
+		//
+		this.routeData.spacing = new ArrayList<Integer>(0);
 		
 		//E.g. root\routes\2018_napalm_left_side.route
 		String fullPath = folder.toLowerCase() + File.separator + this.getName() + "." + PhantomRoute.EXTENSION;
@@ -151,6 +133,21 @@ public class PhantomRoute
 		}
 	}
 	
+	/**
+	 * Used to create entirely new routes
+	 * CAN be used to access old routes
+	 * Will always override any previous version with this name and robot
+	 * NOTE: This is a shorthand constructor that cuts out the requirement for role and description
+	 * @param timeSpacing - milliseconds between recorded values for this file
+	 * @param robot - intended robot of use
+	 * @param title - brief overview of the route like "left_side_high"
+	 * @param folder - folder to create the file in
+	 */
+	public PhantomRoute(String title, String robot, String folder)
+	{
+		this(title, robot, "No description provided.", "No role provided.", folder);
+	}
+
 	/**
 	 * Used to re-wrap previously-saved routes
 	 * CANNOT be used to make new routes
@@ -172,8 +169,6 @@ public class PhantomRoute
 		this.routeData = new RouteData();
 		
 		this.routeData.lastModified = new Date().getTime();
-		
-		this.routeData.timeSpacing = phantomRoute.getTimeSpacing();
 		
 		this.routeData.title = phantomRoute.getTitle();
 		
@@ -217,133 +212,85 @@ public class PhantomRoute
 	}
 	
 	/**
-	 * 
-	 * @param index - The index of analog data timeline to be retrieved
-	 * @return - An ArrayList of the history of all analog values on the requested port
+	 * @param time - value in ms, the time that has passed since playback began
+	 * @return - Which value the timeline should spit out given the time 
 	 */
-	public ArrayList<Double> getAnalog(int index)
+	public int indexFromTime(int time)
 	{
-		return routeData.analog[index];
+		int msSinceStart = 0;
+		int i = 0;
+		while (msSinceStart < time)
+		{
+			msSinceStart += routeData.spacing.get(i);
+			i++;
+		}
+		return i;
 	}
 	
 	/**
-	 * @param index - The index of analog data timeline to be retrieved
-	 * @return - An ArrayList of the history of all analog spacing values on the requested port
+	 * @param channel - which axis to grab from
+	 * @param index - which measurement value to return
+	 * @return - the axis value at that index
 	 */
-	public ArrayList<Integer> getAnalogSpacing(int index)
+	public double getAnalog(int channel, int index)
 	{
-		return routeData.analogSpacing[index];
+		return routeData.analog.get(index)[channel];
 	}
 	
 	/**
-	 * 
-	 * @param index - The index of digital data timeline to be retrieved
-	 * @return - An ArrayList of the history of all digital values on the requested port
+	 * @param channel - which button to grab from
+	 * @param index - which measurement value to return
+	 * @return - the button value at that index
 	 */
-	public ArrayList<Boolean> getDigital(int index)
+	public boolean getDigital(int channel, int index)
 	{
-		return routeData.digital[index];
+		return routeData.digital.get(index)[channel];
 	}
 	
 	/**
-	 * @param index - The index of digital data timeline to be retrieved
-	 * @return - An ArrayList of the history of all digital spacing values on the requested port
+	 * @param index - the measurement in question
+	 * @return - In milliseconds, the duration, since the measurement before this one was taken. For index=0, its the time delay between the recording start and the first measurement.
 	 */
-	public ArrayList<Integer> getDigitalSpacing(int index)
+	public int getSpacing(int index)
 	{
-		return routeData.digitalSpacing[index];
+		return routeData.spacing.get(index);
 	}
 	
-	/**
-	 * Counts as a modification
-	 * @param inputIndex - Index of the analog input to set (e.g. the joystick left y axis button might be 3, or something)
-	 * @param recordingIndex - On that input's timeline, this is the index of the value you intend to change (e.g. the fourth recorded value is index=3)
-	 * @param value - A double, the value to record
-	 */
-	public void setAnalog(int inputIndex, int recordingIndex, double value)
+	public void add(Double analogValues[], Boolean digitalValues[], int spacing)
 	{
-		routeData.analog[inputIndex].set(recordingIndex, value);
+		routeData.analog.add(analogValues);
+		routeData.digital.add(digitalValues);
+		routeData.spacing.add(spacing);
 		routeData.lastModified = new Date().getTime();
 	}
 	
 	/**
-	 * Counts as a modification
-	 * @param inputIndex - Index of the analog input to set (e.g. the joystick left y axis button might be 3, or something)
-	 * @param recordingIndex - On that input's timeline, this is the index of the value you intend to change (e.g. the fourth recorded value is index=3)
-	 * @param value - milliseconds since last measurement
+	 * @param firstIndex - Value to start at
+	 * @param secondIndex - Value to stop at
+	 * @return - The total ms that passsed between those two values being measured
 	 */
-	public void setAnalogSpacing(int inputIndex, int recordingIndex, int value)
+	public int timeBetween(int firstIndex, int secondIndex)
 	{
-		routeData.analogSpacing[inputIndex].set(recordingIndex, value);
-		routeData.lastModified = new Date().getTime();
+		//Total ms between values
+		int returnValue = 0;
+		
+		//Add up all the spacing values between those two
+		//firstIndex + 1 since the firstIndex spacing value isnt in this range
+		for (int i = firstIndex + 1; i <= secondIndex; i++)
+		{
+			returnValue += routeData.spacing.get(i);
+		}
+		
+		//The total ms
+		return returnValue;
 	}
 	
 	/**
-	 * Counts as a modification
-	 * @param inputIndex - Index of the digital input to set (e.g. the joystick left bumper button might be 3, or something)
-	 * @param recordingIndex - On that input's timeline, this is the index of the value you intend to change (e.g. the fourth recorded value is index=3)
-	 * @param value - True or false, the value to record
+	 * @return - Number of data points saved. Should be same for all timelines
 	 */
-	public void setDigital(int inputIndex, int recordingIndex, boolean value)
+	public int length()
 	{
-		routeData.digital[inputIndex].set(recordingIndex, value);
-		routeData.lastModified = new Date().getTime();
-	}
-	
-	/**
-	 * Counts as a modification
-	 * @param inputIndex - Index of the digital input to set (e.g. the joystick left bumper button might be 3, or something)
-	 * @param recordingIndex - On that input's timeline, this is the index of the value you intend to change (e.g. the fourth recorded value is index=3)
-	 * @param value - milliseconds since last measurement
-	 */
-	public void setDigitalSpacing(int inputIndex, int recordingIndex, int value)
-	{
-		routeData.digitalSpacing[inputIndex].set(recordingIndex, value);
-		routeData.lastModified = new Date().getTime();
-	}
-	
-	/**
-	 * Pushes the value onto the end of the analog timeline specified by the index
-	 * @param index - which timeline to push to
-	 * @param value - value to be added
-	 */
-	public void addAnalog(int index, double value)
-	{
-		routeData.analog[index].add(value);
-		routeData.lastModified = new Date().getTime();
-	}
-	
-	/**
-	 * Pushes the value onto the end of the analog spacing timeline specified by the index
-	 * @param index - which timeline to push to
-	 * @param value - value to be added in ms
-	 */
-	public void addAnalogSpacing(int index, int value)
-	{
-		routeData.analogSpacing[index].add(value);
-		routeData.lastModified = new Date().getTime();
-	}
-	
-	/**
-	 * Pushes the value onto the end of the digital timeline specified by the index
-	 * @param index - which timeline to push to
-	 * @param value - value to be added
-	 */
-	public void addDigital(int index, boolean value)
-	{
-		routeData.digital[index].add(value);
-		routeData.lastModified = new Date().getTime();
-	}
-	
-	/**
-	 * Pushes the value onto the end of the digital spacing timeline specified by the index
-	 * @param index - which timeline to push to
-	 * @param value - value to be added in ms
-	 */
-	public void addDigitalSpacing(int index, int value)
-	{
-		routeData.digitalSpacing[index].add(value);
-		routeData.lastModified = new Date().getTime();
+		return routeData.spacing.size();
 	}
 	
 	/**
@@ -382,19 +329,10 @@ public class PhantomRoute
 	 */
 	public void clear()
 	{
-		//Clear out each analog array
-		for (int a = 0; a < routeData.analog.length; a++)
-		{
-			routeData.analog[a].clear();
-			routeData.analogSpacing[a].clear();
-		}
-		
-		//Clear out each digital array
-		for (int b = 0; b < routeData.digital.length; b++)
-		{
-			routeData.digital[b].clear();
-			routeData.analogSpacing[b].clear();
-		}
+		//Clear all arrayLists
+		routeData.analog.clear();
+		routeData.digital.clear();
+		routeData.spacing.clear();
 		
 		//Counts as a modification
 		routeData.lastModified = new Date().getTime();
@@ -418,33 +356,26 @@ public class PhantomRoute
 		//Set to false if any ArrayList in this route is not empty
 		boolean isEmpty = true;
 		
-		for (ArrayList<Double> a : routeData.analog)     
+		//Go through each array and check that all are empty
+		for (Double[] d : routeData.analog)
 		{
-			if (a.size() != 0)
+			if (d.length != 0)
 			{
 				isEmpty = false;
 			}
 		}
-		for (ArrayList<Integer> c : routeData.analogSpacing)     
+		
+		for (Boolean[] b : routeData.digital)
 		{
-			if (c.size() != 0)
+			if (b.length != 0)
 			{
 				isEmpty = false;
 			}
 		}
-		for (ArrayList<Boolean> b : routeData.digital)     
+		
+		if (routeData.spacing.size() != 0)
 		{
-			if (b.size() != 0)
-			{
-				isEmpty = false;
-			}
-		}
-		for (ArrayList<Integer> d : routeData.digitalSpacing)     
-		{
-			if (d.size() != 0)
-			{
-				isEmpty = false;
-			}
+			isEmpty = false;
 		}
 		
 		return isEmpty;
@@ -463,25 +394,18 @@ public class PhantomRoute
 		tableStr += "|    Description: \"" + this.getDescription() + "\"\n";
 		tableStr += "|    Saved at " + this.getPath() + "\n";
 		tableStr += "|    Last Modified " + this.getLastModified() + " (24-h Clock) \n";
-		tableStr += "|    Time Spacing: " + this.getTimeSpacing() + "ms";
+		tableStr += "|    Duration: " + this.getDuration() + "ms";
 		return tableStr;
 	}
 	
 	/**
 	 * @return - a string representation of the time and day this route was last modified. E.g. 7-24-2018 13:43
 	 */
+	@SuppressWarnings("deprecation")
 	public String getLastModified()
 	{
 		Date d = new Date(routeData.lastModified);
 		return (d.getMonth() + "-" + d.getDate() + "-" + d.getYear() + " " + d.getHours() + ":" + d.getMinutes());
-	}
-	
-	/**
-	 * @return - the number of millliseconds between recorded values
-	 */
-	public int getTimeSpacing()
-	{
-		return routeData.timeSpacing;
 	}
 	
 	/**
@@ -490,6 +414,14 @@ public class PhantomRoute
 	public String getDescription()
 	{
 		return routeData.description;
+	}
+	
+	/**
+	 * @return - the time, in seconds, that this will hypothetically take to playback
+	 */
+	public double getDuration()
+	{
+		return timeBetween(0, (routeData.spacing.size() - 1));
 	}
 	
 	/**
@@ -559,25 +491,27 @@ public class PhantomRoute
 		return file.getParentFile().getAbsolutePath();
 	}
 	
+	/**
+	 * WARNING: THIS CAN POTENTIALLY TAKE A LONG TIME TO EXECUTE
+	 * @param other - PhantomRoute to check against
+	 * @return - true if they contain the same data
+	 */
+	public boolean equals(PhantomRoute other)
+	{
+		//Don't like it? Fine. Send your hatemail to bengr444@gmail.com.
+		return this.toString().equals(other.toString());
+	}
+	
 	public String toString()
 	{
-		String returnValue = this.getOverview() + "\n";
-		for (int a = 0; a < routeData.analog[0].size(); a++)
+		String returnValue = this.getOverview() + "\n| ---Contained Data---\n";
+		
+		for (int i = 0; i < this.length(); i++)
 		{
-			returnValue = returnValue + ("Analog Value Set #" + a + ": " + routeData.analog[0]) + "\n";
+			returnValue = returnValue + "| { " + routeData.spacing.get(i) + "ms passes... " + "}\n";
+			returnValue = returnValue + "| Index [" + i + "] -> Analog:" + routeData.analog.get(i) + " | Digital:" + routeData.digital.get(i) + "\n";
 		}
-		for (int b = 0; b < routeData.analogSpacing[0].size(); b++)
-		{
-			returnValue = returnValue + ("Analog Spacing Value Set #" + b + ": " + routeData.analogSpacing[0]) + "\n";
-		}
-		for (int c = 0; c < routeData.digital[0].size(); c++)
-		{
-			returnValue = returnValue + ("Digital Value Set #" + c + ": " + routeData.digital[0]) + "\n";
-		}
-		for (int d = 0; d < routeData.digitalSpacing[0].size(); d++)
-		{
-			returnValue = returnValue + ("Digital Spacing Value Set #" + d + ": " + routeData.digitalSpacing[0]) + "\n";
-		}
+		
 		return returnValue;
 	}
 }

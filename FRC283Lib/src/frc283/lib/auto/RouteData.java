@@ -25,34 +25,28 @@ public class RouteData
 	/** A small description of the intended role e.g. "operator" or "driver" */
 	public String role;
 	
-	/** The time, in milliseconds, between ArrayList values
-	Different versions of this class may use different spacing */
-	public int timeSpacing;
-	
 	/** A number that can be used to see when this route's timeline data was last modified */
 	public long lastModified;
 	
-	/** An array containing ArrayLists of doubles
-	Length 6
+	/** An arraylist containing arrays of doubles
+	Length 6 - 6 different channels
 	These are the analog "timelines" */
-	public ArrayList<Double>[] analog;
+	public ArrayList<Double[]> analog;
 	
-	/**
-	 * Timeline of spacing values: 
-	 * analogSpacings[0].get(0) means the milliseconds that passed before this measurement was taken
-	 * analogSpacings[0].get(1) means the milliseconds that passed between measurement 0 and 1
-	 */
-	public ArrayList<Integer>[] analogSpacing;
+	/** Number of analog input timelines */
+	public final static int analogChannelCount = 6;
 	
-	/** An array containing ArrayLists of booleans
-	Length 10
+	/** An arraylist containingarrays of booleans
+	Length 10 - 10 different channels
 	These are the digital "timelines" */
-	public ArrayList<Boolean>[] digital;
+	public ArrayList<Boolean[]> digital;
+	
+	/** Number of digital input timelines */
+	public final static int digitalChannelCount = 10;
 	
 	/**
 	 * Timeline of spacing values: 
-	 * digitalSpacings[0].get(0) means the milliseconds that passed before this measurement was taken
-	 * digitalSpacings[0].get(1) means the milliseconds that passed between measurement 0 and 1
+	 * so the spacing value at 1 is the time that passed between measurement of value 0 and value 1 for either the digital or analog array
 	 */
-	public ArrayList<Integer>[] digitalSpacing;  
+	public ArrayList<Integer> spacing;  
 }
