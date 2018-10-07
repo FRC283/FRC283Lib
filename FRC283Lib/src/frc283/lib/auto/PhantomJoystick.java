@@ -22,7 +22,7 @@ import edu.wpi.first.wpilibj.Timer;
  *     Recording: The process of actually recording the joystick data
  *     
  * TODO; prevent duplicate routes
- * TODO: enable/disable printsouts
+ * TODO: enable/disable printsouts. For real.
  */
 public class PhantomJoystick
 {
