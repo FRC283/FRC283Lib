@@ -113,23 +113,27 @@ public class PhantomRoute
 		this.gson = new GsonBuilder().create();
 		
 		//There are 6 analog inputs on the robot
-		this.routeData.analog = new ArrayList[6];
+		this.routeData.analog = (new ArrayList[6]);
+		this.routeData.analogSpacing = new ArrayList[6];
 		
 		//Initialize analog array
 		for (int j = 0; j < this.routeData.analog.length; j++)
 		{
 			//Each array value is a boolean ArrayList
 			this.routeData.analog[j] = new ArrayList<Double>(0);
+			this.routeData.analogSpacing[j] = new ArrayList<Integer>(0);
 		}
 		
 		//There are 10 digital inputs on the robot
 		this.routeData.digital = new ArrayList[10];
+		this.routeData.digitalSpacing = new ArrayList[10];
 		
 		//Initialize analog array
 		for (int h = 0; h < this.routeData.digital.length; h++)    
 		{
 			//Each array value is a boolean ArrayList
 			this.routeData.digital[h] = new ArrayList<Boolean>(0);
+			this.routeData.digitalSpacing[h] = new ArrayList<Integer>(0);
 		}
 		
 		//E.g. root\routes\2018_napalm_left_side.route
@@ -223,6 +227,15 @@ public class PhantomRoute
 	}
 	
 	/**
+	 * @param index - The index of analog data timeline to be retrieved
+	 * @return - An ArrayList of the history of all analog spacing values on the requested port
+	 */
+	public ArrayList<Integer> getAnalogSpacing(int index)
+	{
+		return routeData.analogSpacing[index];
+	}
+	
+	/**
 	 * 
 	 * @param index - The index of digital data timeline to be retrieved
 	 * @return - An ArrayList of the history of all digital values on the requested port
@@ -230,6 +243,15 @@ public class PhantomRoute
 	public ArrayList<Boolean> getDigital(int index)
 	{
 		return routeData.digital[index];
+	}
+	
+	/**
+	 * @param index - The index of digital data timeline to be retrieved
+	 * @return - An ArrayList of the history of all digital spacing values on the requested port
+	 */
+	public ArrayList<Integer> getDigitalSpacing(int index)
+	{
+		return routeData.digitalSpacing[index];
 	}
 	
 	/**
@@ -246,6 +268,18 @@ public class PhantomRoute
 	
 	/**
 	 * Counts as a modification
+	 * @param inputIndex - Index of the analog input to set (e.g. the joystick left y axis button might be 3, or something)
+	 * @param recordingIndex - On that input's timeline, this is the index of the value you intend to change (e.g. the fourth recorded value is index=3)
+	 * @param value - milliseconds since last measurement
+	 */
+	public void setAnalogSpacing(int inputIndex, int recordingIndex, int value)
+	{
+		routeData.analogSpacing[inputIndex].set(recordingIndex, value);
+		routeData.lastModified = new Date().getTime();
+	}
+	
+	/**
+	 * Counts as a modification
 	 * @param inputIndex - Index of the digital input to set (e.g. the joystick left bumper button might be 3, or something)
 	 * @param recordingIndex - On that input's timeline, this is the index of the value you intend to change (e.g. the fourth recorded value is index=3)
 	 * @param value - True or false, the value to record
@@ -253,6 +287,18 @@ public class PhantomRoute
 	public void setDigital(int inputIndex, int recordingIndex, boolean value)
 	{
 		routeData.digital[inputIndex].set(recordingIndex, value);
+		routeData.lastModified = new Date().getTime();
+	}
+	
+	/**
+	 * Counts as a modification
+	 * @param inputIndex - Index of the digital input to set (e.g. the joystick left bumper button might be 3, or something)
+	 * @param recordingIndex - On that input's timeline, this is the index of the value you intend to change (e.g. the fourth recorded value is index=3)
+	 * @param value - milliseconds since last measurement
+	 */
+	public void setDigitalSpacing(int inputIndex, int recordingIndex, int value)
+	{
+		routeData.digitalSpacing[inputIndex].set(recordingIndex, value);
 		routeData.lastModified = new Date().getTime();
 	}
 	
@@ -268,6 +314,17 @@ public class PhantomRoute
 	}
 	
 	/**
+	 * Pushes the value onto the end of the analog spacing timeline specified by the index
+	 * @param index - which timeline to push to
+	 * @param value - value to be added in ms
+	 */
+	public void addAnalogSpacing(int index, int value)
+	{
+		routeData.analogSpacing[index].add(value);
+		routeData.lastModified = new Date().getTime();
+	}
+	
+	/**
 	 * Pushes the value onto the end of the digital timeline specified by the index
 	 * @param index - which timeline to push to
 	 * @param value - value to be added
@@ -275,6 +332,17 @@ public class PhantomRoute
 	public void addDigital(int index, boolean value)
 	{
 		routeData.digital[index].add(value);
+		routeData.lastModified = new Date().getTime();
+	}
+	
+	/**
+	 * Pushes the value onto the end of the digital spacing timeline specified by the index
+	 * @param index - which timeline to push to
+	 * @param value - value to be added in ms
+	 */
+	public void addDigitalSpacing(int index, int value)
+	{
+		routeData.digitalSpacing[index].add(value);
 		routeData.lastModified = new Date().getTime();
 	}
 	
@@ -318,14 +386,14 @@ public class PhantomRoute
 		for (int a = 0; a < routeData.analog.length; a++)
 		{
 			routeData.analog[a].clear();
-			System.out.println("Analog array a: " + routeData.analog[a]);
+			routeData.analogSpacing[a].clear();
 		}
 		
 		//Clear out each digital array
 		for (int b = 0; b < routeData.digital.length; b++)
 		{
 			routeData.digital[b].clear();
-			System.out.println("Digital array b: " + routeData.digital[b]);
+			routeData.analogSpacing[b].clear();
 		}
 		
 		//Counts as a modification
@@ -357,9 +425,23 @@ public class PhantomRoute
 				isEmpty = false;
 			}
 		}
+		for (ArrayList<Integer> c : routeData.analogSpacing)     
+		{
+			if (c.size() != 0)
+			{
+				isEmpty = false;
+			}
+		}
 		for (ArrayList<Boolean> b : routeData.digital)     
 		{
 			if (b.size() != 0)
+			{
+				isEmpty = false;
+			}
+		}
+		for (ArrayList<Integer> d : routeData.digitalSpacing)     
+		{
+			if (d.size() != 0)
 			{
 				isEmpty = false;
 			}
@@ -475,5 +557,27 @@ public class PhantomRoute
 	public String getFolder()
 	{
 		return file.getParentFile().getAbsolutePath();
+	}
+	
+	public String toString()
+	{
+		String returnValue = this.getOverview() + "\n";
+		for (int a = 0; a < routeData.analog[0].size(); a++)
+		{
+			returnValue = returnValue + ("Analog Value Set #" + a + ": " + routeData.analog[0]) + "\n";
+		}
+		for (int b = 0; b < routeData.analogSpacing[0].size(); b++)
+		{
+			returnValue = returnValue + ("Analog Spacing Value Set #" + b + ": " + routeData.analogSpacing[0]) + "\n";
+		}
+		for (int c = 0; c < routeData.digital[0].size(); c++)
+		{
+			returnValue = returnValue + ("Digital Value Set #" + c + ": " + routeData.digital[0]) + "\n";
+		}
+		for (int d = 0; d < routeData.digitalSpacing[0].size(); d++)
+		{
+			returnValue = returnValue + ("Digital Spacing Value Set #" + d + ": " + routeData.digitalSpacing[0]) + "\n";
+		}
+		return returnValue;
 	}
 }

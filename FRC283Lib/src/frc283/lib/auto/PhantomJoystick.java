@@ -3,6 +3,7 @@ package frc283.lib.auto;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Timer;
 
@@ -21,42 +22,42 @@ import edu.wpi.first.wpilibj.Timer;
  *     Recording: The process of actually recording the joystick data
  *     
  * TODO; prevent duplicate routes
- * TODO: save function
  * TODO: enable/disable printsouts
  * TODO: change everything to javadoc comments
  * TODO: maybe have the constructor not have everry parameter in it, i.e optional apramers
  * TODO: have a version number system in the constructor
- * TODO: every data point must have an ms thing - if you do this, consider making the timespacing infinity i.e. saves data on every loop possible
  */
 public class PhantomJoystick
 {
-	//The folder where all NEW routes are saved. It's possible that some old routes fell outside this folder. Should not end with a slash
+	/** The folder where all NEW routes are saved. It's possible that some old routes fell outside this folder. Should not end with a slash */
 	public final static String routeFolder = "/home/lvuser/frc/routes";
 	
-	//The folder that is searched for all .route files. Should be as high up in the file system as possible
-	//TODO: Find the best value for this
+	/** The folder that is searched for all .route files. Should be as high up in the file system as possible */
 	public final static String ROOT_SEARCH_FOLDER = "/home";
 	
-	//True when playing back the data
+	/** True when playing back the data */
 	private boolean playback = false;
 	
-	//True when recording the data
+	/** True when recording the data */
 	private boolean recording = false;
 	
-	//Allows printouts when functions execute. Can disable with disablePrintouts()
+	/** Allows printouts when functions execute. Can disable with disablePrintouts() */
 	private boolean allowPrintouts = true;
 	
-	//Used to mete out recording and playback
+	/** Used to mete out recording and playback */
 	private Timer timer;
 	
-	//The string name of the route currently being written/read to/from
-	//Why is this a string and not a PhantomRoute? Because java passes objects strangely, so we dont want to make a bunch of dupes
+	/** The string name of the route currently being written/read to/from
+	Why is this a string and not a PhantomRoute? Because java passes objects strangely, so we dont want to make a bunch of dupes */
 	private String activeRoute;
 	
-	//Joystick where values are watched during recording
+	/** Used to control indexing during playback */
+	private int playbackIndex = 0;
+	
+	/** Joystick where values are watched during recording */
 	private Joystick recordingJoystick;
 	
-	//Contains all PhantomRoutes found all the system
+	/** Contains all PhantomRoutes found all the system */
 	private HashMap<String, PhantomRoute> storedRoutes;
 	
 	public PhantomJoystick(Joystick recordingJoystick)
@@ -206,18 +207,7 @@ public class PhantomJoystick
 	{
 		if (playback == true)
 		{
-			int timeIndex = getTimeIndex(timer.get());
-			System.out.println("Accessing analog timeline " + number + " at timeIndex " + timeIndex + " at time " + timer.get());
-			ArrayList<Double> timeline = storedRoutes.get(activeRoute).getAnalog(number);
-			if (timeIndex < timeline.size())
-			{
-				return timeline.get(timeIndex);
-			}
-			else
-			{
-				playbackStop();
-				return 0;
-			}
+			
 		}
 		else
 		{
@@ -306,6 +296,8 @@ public class PhantomJoystick
 				{
 					//Get analog input #a, set its value at the timeIndex to be the current joystick axis value for axis #a
 					storedRoutes.get(activeRoute).getAnalog(a).add(recordingJoystick.getRawAxis(a));
+					//Push time since last recording
+					storedRoutes.get(activeRoute).getAnalogSpacing(a).add((int)(timer.get() * 1000));
 				}
 				
 				//For each possible digital input
@@ -313,6 +305,8 @@ public class PhantomJoystick
 				{
 					//Get digital input #d, set its value at the timeIndex to be the current joystick button value for digital #d
 					storedRoutes.get(activeRoute).getDigital(d).add(recordingJoystick.getRawButton(d));
+					//Push the time since last recording
+					storedRoutes.get(activeRoute).getDigitalSpacing(d).add((int)(timer.get() * 1000));
 				}
 				
 				//IMPORTANT: reset the timer.
@@ -367,6 +361,7 @@ public class PhantomJoystick
 			print("Playback initiated.");
 			timer.reset();
 			timer.start();
+			playbackIndex = 0;
 			playback = true;
 		}
 	}
