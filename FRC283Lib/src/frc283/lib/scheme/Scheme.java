@@ -14,12 +14,12 @@ import java.util.Date;
 
 import javax.imageio.ImageIO;
 
-public abstract class Utilities283
+public abstract class Scheme
 {
 	
 	public static void main(String[] args)
 	{
-		Utilities283.generateControls("Power Up", "org.usfirst.frc.team283.robot.DriveSubsystem", "org.usfirst.frc.team283.robot.LiftSubsystem");
+		Scheme.generateControls("Power Up", "org.usfirst.frc.team283.robot.DriveSubsystem", "org.usfirst.frc.team283.robot.LiftSubsystem");
 	}
 	
 	//Logitech Ports (Default)
