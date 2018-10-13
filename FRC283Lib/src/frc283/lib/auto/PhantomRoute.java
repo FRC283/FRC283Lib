@@ -256,11 +256,14 @@ public class PhantomRoute
 		return routeData.spacing.get(index);
 	}
 	
-	public void add(Double analogValues[], Boolean digitalValues[], int spacing)
+	public void add(Double[] analogValues, Boolean[] digitalValues, int spacing)
 	{
 		routeData.analog.add(analogValues);
+		//System.out.println("analogValues: " + analogValues);
 		routeData.digital.add(digitalValues);
+		//System.out.println("digitalValues: " + digitalValues);
 		routeData.spacing.add(spacing);
+		//System.out.println("spacing: " + spacing + "ms");
 		routeData.lastModified = new Date().getTime();
 	}
 	
@@ -294,11 +297,20 @@ public class PhantomRoute
 	}
 	
 	/**
+	 * @return - The last recording index that exists (index, not value.)
+	 */
+	public int lastIndex()
+	{
+		return this.length() - 1;
+	}
+	
+	/**
 	 * If this is a new route, saves the route to the file system.
 	 * If this was a previous route that was re-contructed, then this updates the file, overwriting the new one
 	 */
 	public void save()
 	{
+		System.out.println("Saving! Current Status is:\n" + this);
 		try 
 		{
 			fileWriter = new FileWriter(file);
@@ -509,7 +521,22 @@ public class PhantomRoute
 		for (int i = 0; i < this.length(); i++)
 		{
 			returnValue = returnValue + "| { " + routeData.spacing.get(i) + "ms passes... " + "}\n";
-			returnValue = returnValue + "| Index [" + i + "] -> Analog:" + routeData.analog.get(i) + " | Digital:" + routeData.digital.get(i) + "\n";
+			
+			String analogStr = "[";
+			for (Double a : routeData.analog.get(i))
+			{
+				analogStr = analogStr + a + ",";
+			}
+			analogStr = analogStr + "]";
+			
+			String digitalStr = "[";
+			for (Boolean a : routeData.digital.get(i))
+			{
+				digitalStr = digitalStr + a + ",";
+			}
+			digitalStr = digitalStr + "]";
+			
+			returnValue = returnValue + "| Index [" + i + "] -> Analog:" + analogStr + " | Digital:" + digitalStr + "\n";
 		}
 		
 		return returnValue;

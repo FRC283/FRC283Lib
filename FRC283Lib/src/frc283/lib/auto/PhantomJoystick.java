@@ -22,7 +22,7 @@ import edu.wpi.first.wpilibj.Timer;
  *     Recording: The process of actually recording the joystick data
  *     
  * TODO; prevent duplicate routes
- * TODO: enable/disable printsouts. For real.
+ * TODO: enable/disable printsouts. For real. nEEDED
  */
 public class PhantomJoystick
 {
@@ -189,8 +189,18 @@ public class PhantomJoystick
 			//Convert the playbackTime to an index value for that time
 			int playbackIndex = activeRoute.indexFromTime((int)(timer.get() * 1000));
 			
-			//Return the data at that index
-			return activeRoute.getAnalog(channel, playbackIndex);
+			//If its a valid index
+			if (playbackIndex <= activeRoute.lastIndex())
+			{
+				//Return the data at that index
+				return activeRoute.getAnalog(channel, playbackIndex);
+			}
+			else
+			{
+				System.out.println("Playback has ended.");
+				playbackStop();
+				return 0;
+			}
 		}
 		else
 		{
@@ -255,6 +265,7 @@ public class PhantomJoystick
 	 */
 	public void recordPeriodic()
 	{
+		//System.out.println("PhantomJoystick.recording: " + recording);
 		if (recording == true)
 		{
 			//Contains all the analog values from this measurement cycle
@@ -264,6 +275,7 @@ public class PhantomJoystick
 			for (int a = 0; a < analogValues.length; a++)
 			{
 				//Populate the array with axis values
+				System.out.println("joystick@axis:" + a + ": " + recordingJoystick.getRawAxis(a));
 				analogValues[a] = recordingJoystick.getRawAxis(a);
 			}
 			
@@ -274,7 +286,7 @@ public class PhantomJoystick
 			for (int d = 0; d < digitalValues.length; d++)
 			{
 				//Populate the array with button values
-				digitalValues[d] = recordingJoystick.getRawButton(d);
+				digitalValues[d] = recordingJoystick.getRawButton(d + 1);
 			}
 			
 			//The milliseconds that have passed since last measurement
@@ -330,6 +342,14 @@ public class PhantomJoystick
 			timer.stop();
 			timer.reset();
 		}
+	}
+	
+	/**
+	 * @return - true if currently playing back. false when playback hasn't started or has ended.
+	 */
+	public boolean getPlaybackState()
+	{
+		return playback;
 	}
 	
 	/**
