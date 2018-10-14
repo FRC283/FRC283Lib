@@ -25,7 +25,7 @@ import edu.wpi.first.wpilibj.Timer;
  * TODO: enable/disable printsouts. For real. nEEDED
  * TODO: reversing function
  */
-public class PhantomJoystick
+public class PhantomDriver
 {
 	/** The folder where all NEW routes are saved. It's possible that some old routes fell outside this folder. Should not end with a slash */
 	public final static String routeFolder = "/home/lvuser/frc/routes";
@@ -51,22 +51,22 @@ public class PhantomJoystick
 	/** Used to control indexing during playback */
 	private int playbackIndex = 0;
 	
-	/** Joystick where values are watched during recording */
-	private Joystick recordingJoystick;
+	/** Joysticks where values are watched during recording */
+	private Joystick[] recordingJoysticks;
 	
 	/** Contains all PhantomRoutes found all the system */
 	private HashMap<String, PhantomRoute> storedRoutes;
 	
-	public PhantomJoystick(Joystick recordingJoystick)
+	public PhantomDriver(Joystick[] recordingJoysticks)
 	{
 		storedRoutes = new HashMap<String, PhantomRoute>();
 		
 		timer = new Timer();
 		
-		this.recordingJoystick = recordingJoystick;
+		this.recordingJoysticks = recordingJoysticks;
 		
 		//Create a directory representation, and start iterating through it for .route files
-		createPhantomRoutes(new File(PhantomJoystick.ROOT_SEARCH_FOLDER).listFiles());
+		createPhantomRoutes(new File(PhantomDriver.ROOT_SEARCH_FOLDER).listFiles());
 	}
 	
 	/**
@@ -156,7 +156,7 @@ public class PhantomJoystick
 		//Ensures that the route folder exists
 		File folder = new File(routeFolder);
 		//Create a new PhantomRoute file
-		PhantomRoute newPhantomRoute = new PhantomRoute(title, robot, desc, role, routeFolder);
+		PhantomRoute newPhantomRoute = new PhantomRoute(recordingJoysticks.length, title, robot, desc, role, routeFolder);
 		//Add this new route to the index
 		storedRoutes.put(newPhantomRoute.getName(), newPhantomRoute);
 	}
@@ -180,10 +180,11 @@ public class PhantomJoystick
 	}
 	
 	/**
+	 * @param joystickIndex - which joystick to grab from
 	 * @param channel - the axis number to get the value for
 	 * @return - the most appropriate value for the current time since playback started
 	 */
-	public double getRawAxis(int channel)
+	public double getRawAxis(int joystickIndex, int channel)
 	{
 		if (playback == true)
 		{
@@ -194,7 +195,7 @@ public class PhantomJoystick
 			if (playbackIndex <= activeRoute.lastIndex())
 			{
 				//Return the data at that index
-				return activeRoute.getAnalog(channel, playbackIndex);
+				return activeRoute.getAnalog(joystickIndex, channel, playbackIndex);
 			}
 			else
 			{
@@ -211,10 +212,11 @@ public class PhantomJoystick
 	}
 	
 	/**
+	 * @param joystickIndex - which joystick to grab from
 	 * @param channel - the button number to get the value for
 	 * @return - the most appropriate value for the current time since playback started
 	 */
-	public boolean getRawButton(int channel)
+	public boolean getRawButton(int joystickIndex, int channel)
 	{
 		if (playback == true)
 		{
@@ -222,7 +224,7 @@ public class PhantomJoystick
 			int playbackIndex = activeRoute.indexFromTime((int)(timer.get() * 1000));
 			
 			//Return the data at that index
-			return activeRoute.getDigital(channel, playbackIndex);
+			return activeRoute.getDigital(joystickIndex, channel, playbackIndex);
 		}
 		else
 		{
@@ -270,24 +272,29 @@ public class PhantomJoystick
 		if (recording == true)
 		{
 			//Contains all the analog values from this measurement cycle
-			Double[] analogValues = new Double[RouteData.analogChannelCount];
+			Double[][] analogValues = new Double[activeRoute.joystickCount()][RouteData.analogChannelCount];
 			
 			//For each possible analog input
-			for (int a = 0; a < analogValues.length; a++)
+			for (int joystickIndex = 0; joystickIndex < activeRoute.joystickCount(); joystickIndex++)
 			{
-				//Populate the array with axis values
-				System.out.println("joystick@axis:" + a + ": " + recordingJoystick.getRawAxis(a));
-				analogValues[a] = recordingJoystick.getRawAxis(a);
+				for (int a = 0; a < analogValues.length; a++)
+				{
+					//Populate the array with axis values
+					analogValues[joystickIndex][a] = recordingJoysticks[joystickIndex].getRawAxis(a);
+				}
 			}
 			
 			//Contains all the digital values from this measurement cycle
-			Boolean[] digitalValues = new Boolean[RouteData.digitalChannelCount];
+			Boolean[][] digitalValues = new Boolean[activeRoute.joystickCount()][RouteData.digitalChannelCount];
 			
 			//For each possible digital input
-			for (int d = 0; d < digitalValues.length; d++)
+			for (int joystickIndex = 0; joystickIndex < activeRoute.joystickCount(); joystickIndex++)
 			{
-				//Populate the array with button values
-				digitalValues[d] = recordingJoystick.getRawButton(d + 1);
+				for (int d = 0; d < digitalValues.length; d++)
+				{
+					//Populate the array with button values
+					digitalValues[joystickIndex][d] = recordingJoysticks[joystickIndex].getRawButton(d + 1);
+				}
 			}
 			
 			//The milliseconds that have passed since last measurement

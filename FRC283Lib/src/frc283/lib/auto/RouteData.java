@@ -30,16 +30,18 @@ public class RouteData
 	
 	/** An arraylist containing arrays of doubles
 	Length 6 - 6 different channels
-	These are the analog "timelines" */
-	public ArrayList<Double[]> analog;
+	These are the analog "timelines" 
+	One arraylist per joystick */
+	public ArrayList<Double[]>[] analog;
 	
 	/** Number of analog input timelines */
 	public final static int analogChannelCount = 6;
 	
 	/** An arraylist containingarrays of booleans
 	Length 10 - 10 different channels
-	These are the digital "timelines" */
-	public ArrayList<Boolean[]> digital;
+	These are the digital "timelines" 
+	One arraylist per joystick*/
+	public ArrayList<Boolean[]>[] digital;
 	
 	/** Number of digital input timelines */
 	public final static int digitalChannelCount = 10;

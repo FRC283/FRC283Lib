@@ -82,6 +82,7 @@ public class PhantomRoute
 	 * Used to create entirely new routes
 	 * CAN be used to access old routes
 	 * Will always override any previous version with this name and robot
+	 * @param joystickCount - number of joysticks to store values for
 	 * @param timeSpacing - milliseconds between recorded values for this file
 	 * @param title - brief overview of the route like "left_side_high"
 	 * @param desc - detailed overview of the route
@@ -89,7 +90,7 @@ public class PhantomRoute
 	 * @param robot - name of the robot to use with route with
 	 * @param role - e.g. "Operator" or "Driver"
 	 */
-	public PhantomRoute(String title, String robot, String desc, String role, String folder)
+	public PhantomRoute(int joystickCount, String title, String robot, String desc, String role, String folder)
 	{
 		this.routeData = new RouteData();
 		
@@ -107,13 +108,20 @@ public class PhantomRoute
 		this.routeData.version = 1;
 		
 		//Using a GsonBuilder allows pretty printing to be set to true, meaning the output file will be more human-friendly to read
+		//TODO make pretty print
 		this.gson = new GsonBuilder().create();
 		
-		//There are 6 analog inputs on the robot
-		this.routeData.analog = new ArrayList<Double[]>(0);
+		for (int a = 0; a < joystickCount; a++)
+		{
+			//There are 6 analog inputs on the robot
+			this.routeData.analog[a] = new ArrayList<Double[]>(0);
+		}
 		
-		//There are 10 digital inputs on the robot
-		this.routeData.digital = new ArrayList<Boolean[]>(0);
+		for (int d = 0; d < joystickCount; d++)
+		{
+			//There are 10 digital inputs on the robot
+			this.routeData.digital[d] = new ArrayList<Boolean[]>(0);
+		}
 		
 		//
 		this.routeData.spacing = new ArrayList<Integer>(0);
@@ -138,14 +146,15 @@ public class PhantomRoute
 	 * CAN be used to access old routes
 	 * Will always override any previous version with this name and robot
 	 * NOTE: This is a shorthand constructor that cuts out the requirement for role and description
+	 * @param joystickCount - number of joysticks to store values for
 	 * @param timeSpacing - milliseconds between recorded values for this file
 	 * @param robot - intended robot of use
 	 * @param title - brief overview of the route like "left_side_high"
 	 * @param folder - folder to create the file in
 	 */
-	public PhantomRoute(String title, String robot, String folder)
+	public PhantomRoute(int joystickCount, String title, String robot, String folder)
 	{
-		this(title, robot, "No description provided.", "No role provided.", folder);
+		this(joystickCount, title, robot, "No description provided.", "No role provided.", folder);
 	}
 
 	/**
@@ -228,23 +237,25 @@ public class PhantomRoute
 	}
 	
 	/**
+	 * @param joystickIndex - which joystick to grab from
 	 * @param channel - which axis to grab from
 	 * @param index - which measurement value to return
 	 * @return - the axis value at that index
 	 */
-	public double getAnalog(int channel, int index)
+	public double getAnalog(int joystickIndex, int channel, int index)
 	{
-		return routeData.analog.get(index)[channel];
+		return routeData.analog[joystickIndex].get(index)[channel];
 	}
 	
 	/**
+	 * @param joystickIndex - which joystick to grab from
 	 * @param channel - which button to grab from
 	 * @param index - which measurement value to return
 	 * @return - the button value at that index
 	 */
-	public boolean getDigital(int channel, int index)
+	public boolean getDigital(int joystickIndex, int channel, int index)
 	{
-		return routeData.digital.get(index)[channel];
+		return routeData.digital[joystickIndex].get(index)[channel];
 	}
 	
 	/**
@@ -256,14 +267,30 @@ public class PhantomRoute
 		return routeData.spacing.get(index);
 	}
 	
-	public void add(Double[] analogValues, Boolean[] digitalValues, int spacing)
+	/**
+	 * @param analogValues - A 2d array where the containing array correlates to the joystick index and the inner array is the channel values
+	 * @param digitalValues - A 2d array where the containing array correlates to the joystick index and the inner array is the channel values
+	 * @param spacing - ms since last measurement
+	 */
+	public void add(Double[][] analogValues, Boolean[][] digitalValues, int spacing)
 	{
-		routeData.analog.add(analogValues);
-		//System.out.println("analogValues: " + analogValues);
-		routeData.digital.add(digitalValues);
-		//System.out.println("digitalValues: " + digitalValues);
+		//For each joystick
+		for (int a = 0; a < analogValues.length; a++)
+		{
+			//Add that joystick's value array onto that joystick's array
+			routeData.analog[a].add(analogValues[a]);
+		}
+		
+		//For each joystick
+		for (int d = 0; d < digitalValues.length; d++)
+		{
+			//Add that joystick's value array onto that joystick's array
+			routeData.digital[d].add(digitalValues[d]);
+		}
+		
+		//Add the spacing
 		routeData.spacing.add(spacing);
-		//System.out.println("spacing: " + spacing + "ms");
+		
 		routeData.lastModified = new Date().getTime();
 	}
 	
@@ -305,6 +332,15 @@ public class PhantomRoute
 	}
 	
 	/**
+	 * @return - How many joysticks this route has data for
+	 */
+	public int joystickCount()
+	{
+		//Arbitrarily choose analog to measure. digital should be same
+		return this.routeData.analog.length;
+	}
+	
+	/**
 	 * If this is a new route, saves the route to the file system.
 	 * If this was a previous route that was re-contructed, then this updates the file, overwriting the new one
 	 */
@@ -342,8 +378,16 @@ public class PhantomRoute
 	public void clear()
 	{
 		//Clear all arrayLists
-		routeData.analog.clear();
-		routeData.digital.clear();
+		for (int a = 0; a < routeData.analog.length; a++)
+		{
+			routeData.analog[a].clear();
+		}
+		
+		for (int d = 0; d < routeData.digital.length; d++)
+		{
+			routeData.digital[d].clear();
+		}
+		
 		routeData.spacing.clear();
 		
 		//Counts as a modification
@@ -369,19 +413,25 @@ public class PhantomRoute
 		boolean isEmpty = true;
 		
 		//Go through each array and check that all are empty
-		for (Double[] d : routeData.analog)
+		for (int joystickIndex = 0; joystickIndex < routeData.analog.length; joystickIndex++)
 		{
-			if (d.length != 0)
+			for (Double[] a : routeData.analog[joystickIndex])
 			{
-				isEmpty = false;
+				if (a.length != 0)
+				{
+					isEmpty = false;
+				}
 			}
 		}
 		
-		for (Boolean[] b : routeData.digital)
+		for (int joystickIndex = 0; joystickIndex < routeData.analog.length; joystickIndex++)
 		{
-			if (b.length != 0)
+			for (Boolean[] d : routeData.digital[joystickIndex])
 			{
-				isEmpty = false;
+				if (d.length != 0)
+				{
+					isEmpty = false;
+				}
 			}
 		}
 		
@@ -523,21 +573,31 @@ public class PhantomRoute
 		{
 			returnValue = returnValue + "| { " + routeData.spacing.get(i) + "ms passes... " + "}\n";
 			
-			String analogStr = "[";
-			for (Double a : routeData.analog.get(i))
+			String analogStr = "{";
+			for (int joystickIndex = 0; joystickIndex < routeData.analog.length; joystickIndex++)
 			{
-				analogStr = analogStr + a + ",";
+				analogStr += "Joystick@" + joystickIndex + " [";
+				for (Double a : routeData.analog[joystickIndex].get(i))
+				{
+					analogStr = analogStr + a + ",";
+				}
+				analogStr += "]\n";
 			}
-			analogStr = analogStr + "]";
+			analogStr = analogStr + "}";
 			
-			String digitalStr = "[";
-			for (Boolean a : routeData.digital.get(i))
+			String digitalStr = "{";
+			for (int joystickIndex = 0; joystickIndex < routeData.analog.length; joystickIndex++)
 			{
-				digitalStr = digitalStr + a + ",";
+				digitalStr += "Joystick@" + joystickIndex + " [";
+				for (Boolean a : routeData.digital[joystickIndex].get(i))
+				{
+					digitalStr = digitalStr + a + ",";
+				}
+				digitalStr += "]\n";
 			}
-			digitalStr = digitalStr + "]";
+			digitalStr = digitalStr + "}";
 			
-			returnValue = returnValue + "| Index [" + i + "] -> Analog:" + analogStr + " | Digital:" + digitalStr + "\n";
+			returnValue = returnValue + "| Index [" + i + "] ->\nAnalog:" + analogStr + "\n| Digital:" + digitalStr + "\n";
 		}
 		
 		return returnValue;
