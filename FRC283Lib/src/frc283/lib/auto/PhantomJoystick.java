@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj.Timer;
  *     
  * TODO; prevent duplicate routes
  * TODO: enable/disable printsouts. For real. nEEDED
+ * TODO: reversing function
  */
 public class PhantomJoystick
 {
@@ -417,6 +418,13 @@ public class PhantomJoystick
 		{
 			tableStr += pr.getOverview() + "\n";
 			tableStr += "+------------------------------------------------------------------------+" + "\n";
+			
+			//If active route and the the iterated route reference the same object
+			if (pr == activeRoute)
+			{
+				tableStr += "|                      ^ ^ ^ ^ " + "Active Route " + " ^ ^ ^ ^                      |" + "\n";
+				tableStr += "+------------------------------------------------------------------------+" + "\n";
+			}
 		}
 		return tableStr;
 	}

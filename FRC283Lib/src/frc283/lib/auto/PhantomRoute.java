@@ -518,6 +518,7 @@ public class PhantomRoute
 	{
 		String returnValue = this.getOverview() + "\n| ---Contained Data---\n";
 		
+		//TODO: this doesnt work
 		for (int i = 0; i < this.length(); i++)
 		{
 			returnValue = returnValue + "| { " + routeData.spacing.get(i) + "ms passes... " + "}\n";
