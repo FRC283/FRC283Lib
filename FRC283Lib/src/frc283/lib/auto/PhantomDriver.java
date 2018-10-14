@@ -125,6 +125,7 @@ public class PhantomDriver
 	 * Stops functions from echoing when called.
 	 * Printouts are enabled by default and cannot be re-enabled after calling this
 	 */
+	@Deprecated
 	public void disablePrintouts()
 	{
 		allowPrintouts = false;
@@ -148,10 +149,9 @@ public class PhantomDriver
 	 * @param title
 	 * @param robot
 	 * @param desc
-	 * @param role
 	 * @param timeSpacing -
 	 */
-	public void createRoute(String title, String robot, String desc, String role)
+	public void createRoute(String title, String robot, String desc)
 	{
 		//Ensures that the route folder exists
 		File folder = new File(routeFolder);
