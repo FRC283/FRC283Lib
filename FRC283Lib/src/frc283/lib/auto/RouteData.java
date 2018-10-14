@@ -22,9 +22,6 @@ public class RouteData
 	Appears on end of name if greater than 1 */
 	public int version;
 	
-	/** A small description of the intended role e.g. "operator" or "driver" */
-	public String role;
-	
 	/** A number that can be used to see when this route's timeline data was last modified */
 	public long lastModified;
 	

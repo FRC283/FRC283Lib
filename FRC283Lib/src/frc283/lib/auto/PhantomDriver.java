@@ -149,14 +149,14 @@ public class PhantomDriver
 	 * @param robot
 	 * @param desc
 	 * @param role
-	 * @param timeSpacing - Must be at least 30ms
+	 * @param timeSpacing -
 	 */
 	public void createRoute(String title, String robot, String desc, String role)
 	{
 		//Ensures that the route folder exists
 		File folder = new File(routeFolder);
 		//Create a new PhantomRoute file
-		PhantomRoute newPhantomRoute = new PhantomRoute(recordingJoysticks.length, title, robot, desc, role, routeFolder);
+		PhantomRoute newPhantomRoute = new PhantomRoute(recordingJoysticks.length, title, robot, desc, routeFolder);
 		//Add this new route to the index
 		storedRoutes.put(newPhantomRoute.getName(), newPhantomRoute);
 	}
