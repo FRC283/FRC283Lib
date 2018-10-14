@@ -48,5 +48,5 @@ public class RouteData
 	 * Timeline of spacing values: 
 	 * so the spacing value at 1 is the time that passed between measurement of value 0 and value 1 for either the digital or analog array
 	 */
-	public ArrayList<Integer> spacing;  
+	public ArrayList<Integer> spacing;
 }
