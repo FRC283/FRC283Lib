@@ -57,7 +57,7 @@ public class PhantomDriver
 	/** Contains all PhantomRoutes found all the system */
 	private HashMap<String, PhantomRoute> storedRoutes;
 	
-	public PhantomDriver(Joystick[] recordingJoysticks)
+	public PhantomDriver(Joystick... recordingJoysticks)
 	{
 		storedRoutes = new HashMap<String, PhantomRoute>();
 		
