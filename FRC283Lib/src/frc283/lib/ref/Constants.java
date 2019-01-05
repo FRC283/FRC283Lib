@@ -1,7 +1,7 @@
 package frc283.lib.ref;
 
 
-public class Constants 
+public abstract class Constants 
 {
 	//Computer Ports
 		public static final int DRIVER_CONTROLLER_PORT = 0; //Logitech 

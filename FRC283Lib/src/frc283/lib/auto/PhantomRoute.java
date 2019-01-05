@@ -97,9 +97,33 @@ public class PhantomRoute
 		//Last modified initially starts as the time of creation 
 		this.routeData.lastModified = new Date().getTime();
 		
-		this.routeData.title = title.toLowerCase().replace(" ", "_");
+		//Set to lowercase
+		title = title.toLowerCase().replace(" ", "_");
 		
-		this.routeData.description = desc.toLowerCase();
+		if (title.equals(""))
+		{
+			//if the title is empty, set it to untitled
+			this.routeData.title = "untitled";
+		}
+		else
+		{
+			//Otherwise set it to the specified title
+			this.routeData.title = title;
+		}
+		
+		//Set to lowercase
+		desc = desc.toLowerCase();
+		
+		if (desc.equals(""))
+		{
+			//If no description is given
+			this.routeData.description = "no description provided.";
+		}
+		else
+		{
+			//Set to the description
+			this.routeData.description = desc;
+		}
 		
 		this.routeData.robot = robot.toLowerCase().replace(" ", "_");
 		

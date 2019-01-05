@@ -14,9 +14,9 @@ import java.util.Date;
 
 import javax.imageio.ImageIO;
 
+//TODO: have a function that lets you manually register additional key-values
 public abstract class Scheme
 {
-	
 	public static void main(String[] args)
 	{
 		Scheme.generateControls("Power Up", "org.usfirst.frc.team283.robot.DriveSubsystem", "org.usfirst.frc.team283.robot.LiftSubsystem");
