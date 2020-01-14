@@ -6,6 +6,8 @@ plugins {
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
+group 'org.team283'
+
 def ROBOT_MAIN_CLASS = "org.usfirst.frc.team283.robot.Main"
 
 // Define my targets (RoboRIO) and artifacts (deployable files)
@@ -53,6 +55,7 @@ dependencies {
     nativeZip wpi.deps.vendor.jni(wpi.platforms.roborio)
     nativeDesktopZip wpi.deps.vendor.jni(wpi.platforms.desktop)
     testCompile 'junit:junit:4.12'
+    implementation 'com.google.code.gson:gson:2.8.6'
 }
 
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')

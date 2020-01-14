@@ -1,7 +1,6 @@
-package frc283.lib.auto;
+package org.team283.auto;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import edu.wpi.first.wpilibj.Joystick;

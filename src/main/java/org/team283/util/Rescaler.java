@@ -1,4 +1,4 @@
-package frc283.lib.util;
+package org.team283.util;
 
 public class Rescaler 
 {

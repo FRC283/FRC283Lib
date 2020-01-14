@@ -1,4 +1,4 @@
-package frc283.lib.scheme;
+package org.team283.scheme;
 
 import java.awt.Color;
 import java.awt.Font;
